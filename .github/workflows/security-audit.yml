@@ -1,0 +1,56 @@
+name: Security Audit
+
+on:
+  schedule:
+    # Run weekly on Mondays
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16'
+
+    - name: Install extension dependencies
+      run: |
+        cd extension
+        npm ci
+
+    - name: Run npm audit
+      run: |
+        cd extension
+        npm audit --audit-level=moderate
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.8'
+
+    - name: Install Python security tools
+      run: |
+        pip install safety bandit
+
+    - name: Install Python dependencies
+      run: |
+        pip install fastapi uvicorn transformers torch
+
+    - name: Run Safety check
+      run: |
+        safety check
+
+    - name: Run Bandit security linter
+      run: |
+        bandit -r extension/server.py
+
+    - name: Update dependencies
+      run: |
+        cd extension
+        npm update
+        pip install --upgrade fastapi uvicorn transformers torch

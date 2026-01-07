@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16'
+        cache: 'npm'
+        cache-dependency-path: extension/package-lock.json
+    
+    - name: Install extension dependencies
+      run: |
+        cd extension
+        npm ci
+    
+    - name: Run linting
+      run: |
+        cd extension
+        npm run lint
+    
+    - name: Compile TypeScript
+      run: |
+        cd extension
+        npm run compile
+    
+    - name: Run tests
+      run: |
+        cd extension
+        npm test
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.8'
+    
+    - name: Install Python dependencies
+      run: |
+        pip install pytest fastapi uvicorn transformers torch
+    
+    - name: Run Python tests
+      run: |
+        cd extension
+        python -m pytest ../server.py -v  # Assuming we add tests to server.py
+    
+    - name: Package extension
+      run: |
+        cd extension
+        npx @vscode/vsce package --no-dependencies

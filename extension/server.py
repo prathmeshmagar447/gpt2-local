@@ -3,59 +3,103 @@ from pydantic import BaseModel
 from transformers import GPT2LMHeadModel, GPT2Tokenizer, StoppingCriteria, StoppingCriteriaList
 import torch
 import threading
+from typing import Optional, Dict, Any
 
 app = FastAPI()
 
 # --- MODEL SETUP ---
 model_name = "shibing624/code-autocomplete-gpt2-base"
 device = "cuda" if torch.cuda.is_available() else "cpu"
+use_quantization = False  # Set to True for 8-bit quantization (requires bitsandbytes)
 
-print(f"Loading model on {device}...")
+print(f"Loading model on {device} with quantization={use_quantization}...")
 tokenizer = GPT2Tokenizer.from_pretrained(model_name)
-model = GPT2LMHeadModel.from_pretrained(model_name).to(device)
-print("Model loaded.")
+
+if use_quantization and device == "cuda":
+    try:
+        from transformers import BitsAndBytesConfig
+        quantization_config = BitsAndBytesConfig(
+            load_in_8bit=True,
+            llm_int8_enable_fp32_cpu_offload=True
+        )
+        model = GPT2LMHeadModel.from_pretrained(
+            model_name,
+            quantization_config=quantization_config,
+            device_map="auto"
+        )
+        print("Model loaded with 8-bit quantization.")
+    except ImportError:
+        print("bitsandbytes not installed. Falling back to standard loading.")
+        model = GPT2LMHeadModel.from_pretrained(model_name).to(device)
+        print("Model loaded (standard).")
+else:
+    model = GPT2LMHeadModel.from_pretrained(model_name).to(device)
+    print("Model loaded (standard).")
 
 # --- CACHE SETUP ---
+import hashlib
+from time import time
+
+class CacheEntry:
+    def __init__(self, context: str, prediction: str) -> None:
+        self.context_hash: str = hashlib.md5(context.encode()).hexdigest()
+        self.context: str = context
+        self.prediction: str = prediction
+        self.timestamp: float = time()
+
 class PredictionCache:
-    def __init__(self):
-        self.last_context = ""
-        self.last_full_prediction = ""
-        self.lock = threading.Lock()
+    def __init__(self, ttl_seconds: int = 300) -> None:  # 5 minutes TTL
+        self.cache: Dict[str, CacheEntry] = {}
+        self.lock: threading.Lock = threading.Lock()
+        self.ttl: int = ttl_seconds
 
-    def check_cache(self, current_context):
+    def check_cache(self, current_context: str) -> Optional[str]:
         with self.lock:
-            # Check if current_context is just the last_context + some new characters
-            if current_context.startswith(self.last_context) and len(current_context) > len(self.last_context):
+            current_hash: str = hashlib.md5(current_context.encode()).hexdigest()
 
-                # Identify what the user typed since the last request
-                added_text = current_context[len(self.last_context):]
+            # Check for exact match
+            if current_hash in self.cache:
+                entry = self.cache[current_hash]
+                if time() - entry.timestamp < self.ttl:
+                    print("Cache Hit! Exact match ⚡")
+                    return entry.prediction
 
-                # Check if what they typed matches the start of our previous prediction
-                if self.last_full_prediction.startswith(added_text):
-                    # HIT: The user is typing what we predicted.
-                    # Return the remainder of the prediction without running the GPU.
-                    remaining_prediction = self.last_full_prediction[len(added_text):]
+            # Check for prefix match (user typing continuation)
+            for entry in self.cache.values():
+                if time() - entry.timestamp >= self.ttl:
+                    continue  # Expired
 
-                    # Update cache state so we can keep chaining this logic
-                    self.last_context = current_context
-                    self.last_full_prediction = remaining_prediction
+                if current_context.startswith(entry.context) and len(current_context) > len(entry.context):
+                    added_text: str = current_context[len(entry.context):]
+                    if entry.prediction.startswith(added_text):
+                        remaining_prediction: str = entry.prediction[len(added_text):]
+                        # Create new cache entry for current state
+                        new_entry = CacheEntry(current_context, remaining_prediction)
+                        self.cache[new_entry.context_hash] = new_entry
+                        print("Cache Hit! Prefix match ⚡")
+                        return remaining_prediction
 
-                    return remaining_prediction
         return None
 
-    def update(self, context, prediction):
+    def update(self, context: str, prediction: str) -> None:
         with self.lock:
-            self.last_context = context
-            self.last_full_prediction = prediction
+            entry = CacheEntry(context, prediction)
+            self.cache[entry.context_hash] = entry
+
+            # Clean up expired entries
+            current_time = time()
+            expired_keys = [k for k, v in self.cache.items() if current_time - v.timestamp >= self.ttl]
+            for k in expired_keys:
+                del self.cache[k]
 
 cache = PredictionCache()
 
 # --- STOPPING CRITERIA ---
-newline_token_id = tokenizer.encode("\n")[0]
+newline_token_id: int = tokenizer.encode("\n")[0]
 class StopOnNewLine(StoppingCriteria):
-    def __init__(self, stop_token_id):
-        self.stop_token_id = stop_token_id
-    def __call__(self, input_ids, scores, **kwargs):
+    def __init__(self, stop_token_id: int) -> None:
+        self.stop_token_id: int = stop_token_id
+    def __call__(self, input_ids: torch.Tensor, scores: torch.Tensor, **kwargs: Any) -> bool:
         return input_ids[0, -1] == self.stop_token_id
 
 stopping_criteria = StoppingCriteriaList([StopOnNewLine(newline_token_id)])
@@ -63,9 +107,10 @@ stopping_criteria = StoppingCriteriaList([StopOnNewLine(newline_token_id)])
 class CompletionRequest(BaseModel):
     code_context: str
     multiline: bool = False
+    model_name: Optional[str] = None  # Allow dynamic model switching
 
 @app.post("/predict")
-async def predict(req: CompletionRequest):
+async def predict(req: CompletionRequest) -> Dict[str, Any]:
     try:
         # 1. CHECK CACHE FIRST
         cached_result = cache.check_cache(req.code_context)
@@ -107,9 +152,15 @@ async def predict(req: CompletionRequest):
 
         return {"completion": completion}
 
+    except torch.cuda.OutOfMemoryError:
+        print("Error: GPU out of memory. Consider using CPU or a smaller model.")
+        raise HTTPException(status_code=507, detail="GPU out of memory. Try switching to CPU mode.")
+    except ValueError as e:
+        print(f"Value error during inference: {e}")
+        raise HTTPException(status_code=400, detail=f"Invalid input: {str(e)}")
     except Exception as e:
-        print(f"Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Unexpected error during prediction: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error during prediction.")
 
 if __name__ == "__main__":
     import uvicorn

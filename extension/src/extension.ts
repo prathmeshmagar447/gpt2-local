@@ -1,169 +1,63 @@
 import * as vscode from 'vscode';
-import axios from 'axios';
-import { spawn, ChildProcess } from 'child_process';
-import * as path from 'path';
+import { ServerManager } from './serverManager';
+import { CompletionProvider } from './completionProvider';
+import { StatusBarManager } from './statusBarManager';
+import { CompletionHistory } from './completionHistory';
 
-// Global state
-let isEnabled = true;
-let myStatusBarItem: vscode.StatusBarItem;
-let serverProcess: ChildProcess | undefined; // Reference to the Python server
+// Global instances
+let serverManager: ServerManager;
+let statusBarManager: StatusBarManager;
+let completionHistory: CompletionHistory;
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('GPT-2 Ghost Text Autocomplete is active!');
 
-    // --- 1. START PYTHON SERVER AUTOMATICALLY ---
-    startServer(context);
+    // Initialize managers
+    serverManager = new ServerManager();
+    statusBarManager = new StatusBarManager(context);
+    completionHistory = new CompletionHistory();
 
-    // --- 2. STATUS BAR SETUP ---
-    myStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-    myStatusBarItem.command = 'gpt2-autocomplete.toggle';
-    context.subscriptions.push(myStatusBarItem);
-    updateStatusBarItem();
-    myStatusBarItem.show();
+    // Start Python server
+    serverManager.startServer(context);
 
-    context.subscriptions.push(vscode.commands.registerCommand('gpt2-autocomplete.toggle', () => {
-        isEnabled = !isEnabled;
-        updateStatusBarItem();
-        vscode.window.showInformationMessage(`GPT-2 Autocomplete is now ${isEnabled ? 'ON' : 'OFF'}`);
-    }));
-
-    // --- 3. AUTOCOMPLETE PROVIDER ---
-    let debounceTimer: NodeJS.Timeout | undefined;
-    let cancelTokenSource = axios.CancelToken.source();
-
-    const provider: vscode.InlineCompletionItemProvider = {
-        async provideInlineCompletionItems(document: vscode.TextDocument, position: vscode.Position, context: vscode.InlineCompletionContext, token: vscode.CancellationToken) {
-
-            if (!isEnabled) return [];
-
-            if (debounceTimer) {
-                clearTimeout(debounceTimer);
-                cancelTokenSource.cancel('New input.');
-                cancelTokenSource = axios.CancelToken.source();
-            }
-
-            return new Promise<vscode.InlineCompletionList | vscode.InlineCompletionItem[]>((resolve) => {
-                debounceTimer = setTimeout(async () => {
-                    if (token.isCancellationRequested || !isEnabled) {
-                        resolve([]);
-                        return;
-                    }
-
-                    try {
-                        const startLine = Math.max(0, position.line - 10);
-                        const range = new vscode.Range(startLine, 0, position.line, position.character);
-                        const contextText = document.getText(range);
-
-                        if (!contextText.trim()) {
-                            resolve([]);
-                            return;
-                        }
-
-                        // Determine if this is likely a multiline completion
-                        const isMultiline = document.lineAt(position.line).text.trim().endsWith(':') ||
-                                          document.lineAt(position.line).text.trim().startsWith('def ') ||
-                                          document.lineAt(position.line).text.trim().startsWith('class ');
-
-                        const response = await axios.post('http://127.0.0.1:8000/predict', {
-                            code_context: contextText,
-                            multiline: isMultiline
-                        }, {
-                            cancelToken: cancelTokenSource.token,
-                            timeout: 2000
-                        });
-
-                        const prediction = response.data.completion;
-
-                        if (!prediction || prediction.trim().length === 0) {
-                            resolve([]);
-                            return;
-                        }
-
-                        const item = new vscode.InlineCompletionItem(
-                            prediction,
-                            new vscode.Range(position, position)
-                        );
-                        
-                        item.command = {
-                            command: 'gpt2-autocomplete.logAcceptance',
-                            title: 'Log Acceptance',
-                            arguments: [prediction]
-                        };
-
-                        resolve([item]);
-
-                    } catch (error) {
-                        if (!axios.isCancel(error)) {
-                            // Suppress connection errors if server is still starting up
-                            console.error("API Error (Server might be starting):", (error as any).message);
-                        }
-                        resolve([]);
-                    }
-                }, 300);
-            });
-        }
-    };
-
-    const registration = vscode.languages.registerInlineCompletionItemProvider({ scheme: 'file', language: '*' }, provider);
+    // Register completion provider
+    const completionProvider = new CompletionProvider();
+    const registration = vscode.languages.registerInlineCompletionItemProvider(
+        { scheme: 'file', language: '*' },
+        completionProvider
+    );
     context.subscriptions.push(registration);
-    
-    context.subscriptions.push(vscode.commands.registerCommand('gpt2-autocomplete.logAcceptance', (text) => {
+
+    // Register commands
+    context.subscriptions.push(vscode.commands.registerCommand('gpt2-autocomplete.logAcceptance', (text: string, document: vscode.TextDocument, position: vscode.Position) => {
         console.log(`User accepted code: ${text}`);
+        completionHistory.addAcceptedCompletion(text, document, position);
     }));
-}
 
-// --- HELPER FUNCTIONS ---
+    context.subscriptions.push(vscode.commands.registerCommand('gpt2-autocomplete.undoLast', () => {
+        completionHistory.undoLastCompletion();
+        vscode.window.showInformationMessage('Undid last completion');
+    }));
 
-async function startServer(context: vscode.ExtensionContext) {
-    // 1. Locate server.py inside the extension installation folder
-    const serverPath = path.join(context.extensionPath, 'server.py');
-    console.log(`Launching server from: ${serverPath}`);
-
-    // 2. Try to get the active Python path from VS Code configuration
-    const pythonConfig = vscode.workspace.getConfiguration('python');
-    let pythonPath = pythonConfig.get<string>('defaultInterpreterPath');
-
-    // Fallback if not set
-    if (!pythonPath || pythonPath === 'python') {
-        pythonPath = process.platform === 'win32' ? 'python' : 'python3';
-    }
-
-    console.log(`Launching server with: ${pythonPath}`);
-
-    // 3. Spawn using that specific python
-    serverProcess = spawn(pythonPath, [serverPath]);
-
-    // 4. Handle Server Output (for debugging)
-    serverProcess.stdout?.on('data', (data) => {
-        console.log(`[Server]: ${data}`);
-    });
-
-    serverProcess.stderr?.on('data', (data) => {
-        console.error(`[Server Error]: ${data}`);
-    });
-
-    serverProcess.on('close', (code) => {
-        console.log(`Server exited with code ${code}`);
-        if (code !== 0 && code !== null) {
-            vscode.window.showErrorMessage(`GPT-2 Server crashed (Code: ${code}). Check Output panel.`);
+    context.subscriptions.push(vscode.commands.registerCommand('gpt2-autocomplete.showHistory', () => {
+        const recent = completionHistory.getRecentCompletions();
+        if (recent.length === 0) {
+            vscode.window.showInformationMessage('No completion history');
+            return;
         }
-    });
-}
+        const items = recent.map(item => ({
+            label: item.text.substring(0, 50) + (item.text.length > 50 ? '...' : ''),
+            detail: new Date(item.timestamp).toLocaleString()
+        }));
+        vscode.window.showQuickPick(items, { placeHolder: 'Recent completions' });
+    }));
 
-function updateStatusBarItem() {
-    if (isEnabled) {
-        myStatusBarItem.text = `$(zap) GPT-2: ON`;
-        myStatusBarItem.backgroundColor = undefined;
-    } else {
-        myStatusBarItem.text = `$(circle-slash) GPT-2: OFF`;
-        myStatusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
-    }
+    context.subscriptions.push(vscode.commands.registerCommand('gpt2-autocomplete.openSettings', () => {
+        vscode.commands.executeCommand('workbench.action.openSettings', 'codeCompletion');
+    }));
 }
 
 // --- CLEANUP ---
 export function deactivate() {
-    if (serverProcess) {
-        console.log('Killing GPT-2 Server...');
-        serverProcess.kill(); // Kills the Python process when VS Code closes
-    }
+    serverManager.stopServer();
 }

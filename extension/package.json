@@ -27,6 +27,50 @@
           "type": "string",
           "default": "http://127.0.0.1:8000",
           "description": "URL of the local completion server"
+        },
+        "codeCompletion.temperature": {
+          "type": "number",
+          "default": 0.1,
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Sampling temperature (lower = more deterministic)"
+        },
+        "codeCompletion.topP": {
+          "type": "number",
+          "default": 0.95,
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Top-p sampling parameter"
+        },
+        "codeCompletion.topK": {
+          "type": "number",
+          "default": 50,
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Top-k sampling parameter"
+        },
+        "codeCompletion.maxTokens": {
+          "type": "number",
+          "default": 64,
+          "minimum": 10,
+          "maximum": 512,
+          "description": "Maximum tokens to generate for multiline completions"
+        },
+        "codeCompletion.modelName": {
+          "type": "string",
+          "default": "shibing624/code-autocomplete-gpt2-base",
+          "description": "HuggingFace model name to use"
+        },
+        "codeCompletion.useQuantization": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable 8-bit quantization (requires bitsandbytes)"
+        },
+        "codeCompletion.logLevel": {
+          "type": "string",
+          "enum": ["error", "warn", "info", "debug"],
+          "default": "info",
+          "description": "Logging level for debugging"
         }
       }
     }
@@ -37,7 +81,8 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
-    "test": "node ./out/test/runTest.js"
+    "test": "node ./out/test/runTest.js",
+    "update-deps": "npm update && npm audit fix"
   },
   "devDependencies": {
     "@types/glob": "^8.1.0",
@@ -46,6 +91,7 @@
     "@types/vscode": "^1.74.0",
     "@typescript-eslint/eslint-plugin": "^5.45.0",
     "@typescript-eslint/parser": "^5.45.0",
+    "@vscode/test-electron": "^2.3.0",
     "eslint": "^8.28.0",
     "glob": "^8.1.0",
     "mocha": "^10.1.0",

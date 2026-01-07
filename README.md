@@ -123,8 +123,11 @@ AI Code Companion is a **professional, enterprise-grade** AI coding assistant th
 git clone https://github.com/prathmeshmagar447/gpt2-local.git
 cd gpt2-local
 
-# Install Python dependencies
-pip install fastapi uvicorn transformers torch
+# Install Python dependencies (using requirements.txt)
+pip install -r extension/requirements.txt
+
+# Alternative: Install manually
+# pip install fastapi uvicorn[standard] transformers torch accelerate
 
 # Install VS Code extension dependencies
 cd extension

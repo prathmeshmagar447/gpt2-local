@@ -239,6 +239,7 @@ Access via VS Code Settings (`Ctrl/Cmd + ,`) or use `GPT-2: Open Settings` comma
 - `GPT-2: Open Settings` - Open extension settings
 - `GPT-2: Export Settings` - Backup current configuration
 - `GPT-2: Import Settings` - Restore configuration from file
+- `GPT-2: Show Completion Statistics` - View detailed usage analytics and performance metrics
 
 ### **Available Models**
 

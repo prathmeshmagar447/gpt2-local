@@ -70,6 +70,11 @@
         "command": "gpt2-autocomplete.importSettings",
         "title": "GPT-2: Import Settings",
         "category": "AI Completion"
+      },
+      {
+        "command": "gpt2-autocomplete.showCompletionStats",
+        "title": "GPT-2: Show Completion Statistics",
+        "category": "AI Completion"
       }
     ],
     "configuration": {
@@ -123,6 +128,17 @@
           "enum": ["error", "warn", "info", "debug"],
           "default": "info",
           "description": "Logging level for debugging"
+        },
+        "codeCompletion.suggestionTheme": {
+          "type": "string",
+          "enum": ["default", "subtle", "prominent", "colored"],
+          "default": "default",
+          "description": "Visual theme for code completion suggestions"
+        },
+        "codeCompletion.showCompletionStats": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show completion statistics in status bar"
         }
       }
     }

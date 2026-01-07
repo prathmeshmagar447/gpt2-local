@@ -9,6 +9,7 @@ import { CompletionHistory } from './completionHistory';
 let serverManager: ServerManager;
 let statusBarManager: StatusBarManager;
 let completionHistory: CompletionHistory;
+const activationTime = Date.now();
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('GPT-2 Ghost Text Autocomplete is active!');
@@ -68,7 +69,7 @@ export function activate(context: vscode.ExtensionContext) {
                 description: model.size,
                 detail: `${model.description} - ${model.best_for}`,
                 modelName: model.name
-            } as vscode.QuickPickItem & { modelName: string }));
+            })) as (vscode.QuickPickItem & { modelName: string })[];
 
             const selectedItem = await vscode.window.showQuickPick(quickPickItems, {
                 placeHolder: 'Select AI model for code completion',
@@ -208,12 +209,35 @@ export function activate(context: vscode.ExtensionContext) {
                 await config.update('modelName', settings.modelName, vscode.ConfigurationTarget.Global);
                 await config.update('useQuantization', settings.useQuantization, vscode.ConfigurationTarget.Global);
                 await config.update('logLevel', settings.logLevel, vscode.ConfigurationTarget.Global);
+                await config.update('suggestionTheme', settings.suggestionTheme, vscode.ConfigurationTarget.Global);
+                await config.update('showCompletionStats', settings.showCompletionStats, vscode.ConfigurationTarget.Global);
 
                 vscode.window.showInformationMessage('Settings imported successfully! Restart may be required for some changes.');
             }
         } catch (error) {
             vscode.window.showErrorMessage('Failed to import settings. Invalid file format.');
         }
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('gpt2-autocomplete.showCompletionStats', async () => {
+        // Calculate statistics from status bar manager and completion history
+        const stats = {
+            totalCompletions: completionHistory.getRecentCompletions(1000).length,
+            averageCompletionLength: completionHistory.getRecentCompletions(100).reduce((sum, item) => sum + item.text.length, 0) / Math.max(1, completionHistory.getRecentCompletions(100).length),
+            cacheHits: statusBarManager.getCacheHits(),
+            cacheMisses: statusBarManager.getTotalRequests() - statusBarManager.getCacheHits(),
+            currentModel: vscode.workspace.getConfiguration('codeCompletion').get('modelName'),
+            uptime: Math.floor((Date.now() - activationTime) / 1000 / 60) // minutes
+        };
+
+        const panel = vscode.window.createWebviewPanel(
+            'completionStats',
+            'AI Completion Statistics',
+            vscode.ViewColumn.One,
+            {}
+        );
+
+        panel.webview.html = generateStatsDashboardHTML(stats);
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('gpt2-autocomplete.manageModels', async () => {
@@ -354,6 +378,73 @@ function generateModelManagerHTML(models: any[]): string {
                     vscode.postMessage({ command: 'benchmarkModel', modelName });
                 }
             </script>
+        </body>
+        </html>
+    `;
+}
+
+function generateStatsDashboardHTML(stats: any): string {
+    const cacheHitRate = stats.cacheHits + stats.cacheMisses > 0 ?
+        Math.round((stats.cacheHits / (stats.cacheHits + stats.cacheMisses)) * 100) : 0;
+
+    return `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>AI Completion Statistics</title>
+            <style>
+                body { font-family: var(--vscode-font-family); margin: 20px; background-color: var(--vscode-editor-background); color: var(--vscode-editor-foreground); }
+                h2 { color: var(--vscode-textLink-foreground); text-align: center; }
+                .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 20px; }
+                .stat-card { background-color: var(--vscode-quickInput-background); border: 1px solid var(--vscode-panel-border); border-radius: 8px; padding: 20px; text-align: center; }
+                .stat-value { font-size: 2em; font-weight: bold; color: var(--vscode-textLink-foreground); margin-bottom: 5px; }
+                .stat-label { color: var(--vscode-descriptionForeground); font-size: 0.9em; }
+                .summary { background-color: var(--vscode-textBlockQuote-background); padding: 15px; border-radius: 4px; margin-bottom: 20px; }
+                .good { color: var(--vscode-charts-green); }
+                .warning { color: var(--vscode-charts-yellow); }
+                .error { color: var(--vscode-errorForeground); }
+            </style>
+        </head>
+        <body>
+            <h2>📊 AI Completion Statistics</h2>
+
+            <div class="summary">
+                <strong>Session Summary:</strong> Extension has been active for ${stats.uptime} minutes<br>
+                <strong>Current Model:</strong> ${stats.currentModel || 'Default'}<br>
+                <strong>Cache Performance:</strong> <span class="${cacheHitRate > 80 ? 'good' : cacheHitRate > 50 ? 'warning' : 'error'}">${cacheHitRate}% hit rate</span>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">${stats.totalCompletions}</div>
+                    <div class="stat-label">Total Completions</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-value">${Math.round(stats.averageCompletionLength)}</div>
+                    <div class="stat-label">Avg. Completion Length</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-value ${cacheHitRate > 80 ? 'good' : cacheHitRate > 50 ? 'warning' : 'error'}">${cacheHitRate}%</div>
+                    <div class="stat-label">Cache Hit Rate</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-value">${stats.uptime}m</div>
+                    <div class="stat-label">Session Uptime</div>
+                </div>
+            </div>
+
+            <div style="margin-top: 30px; padding: 15px; background-color: var(--vscode-textBlockQuote-background); border-radius: 4px;">
+                <h3 style="margin-top: 0; color: var(--vscode-textLink-foreground);">💡 Usage Tips</h3>
+                <ul style="color: var(--vscode-descriptionForeground);">
+                    <li><strong>High cache hit rate</strong> indicates efficient suggestions and good performance</li>
+                    <li><strong>Longer average completion length</strong> suggests comprehensive code suggestions</li>
+                    <li><strong>Session uptime</strong> tracks how long the extension has been running</li>
+                    <li>Use <strong>GPT-2: Benchmark Models</strong> to compare model performance</li>
+                </ul>
+            </div>
         </body>
         </html>
     `;

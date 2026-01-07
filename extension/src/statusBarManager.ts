@@ -62,4 +62,12 @@ export class StatusBarManager {
         this.lastResponseTime = responseTime;
         this.updateStatusBarItem();
     }
+
+    getCacheHits(): number {
+        return this.cacheHits;
+    }
+
+    getTotalRequests(): number {
+        return this.totalRequests;
+    }
 }

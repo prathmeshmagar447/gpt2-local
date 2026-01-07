@@ -15,38 +15,43 @@ tokenizer = GPT2Tokenizer.from_pretrained(model_name)
 model = GPT2LMHeadModel.from_pretrained(model_name).to(device)
 print("Model loaded.")
 
-# --- CACHE SETUP ---
+# --- ENHANCED CACHE SETUP ---
 class PredictionCache:
     def __init__(self):
-        self.last_context = ""
-        self.last_full_prediction = ""
+        self.cache = {}  # context -> prediction
         self.lock = threading.Lock()
+        self.max_cache_size = 100  # Limit cache size
 
     def check_cache(self, current_context):
         with self.lock:
-            # Check if current_context is just the last_context + some new characters
-            if current_context.startswith(self.last_context) and len(current_context) > len(self.last_context):
+            # Direct match
+            if current_context in self.cache:
+                print("Cache Hit! Direct match ⚡")
+                return self.cache[current_context]
 
-                # Identify what the user typed since the last request
-                added_text = current_context[len(self.last_context):]
+            # Prefix match - find the longest prefix that matches
+            for cached_context in sorted(self.cache.keys(), key=len, reverse=True):
+                if current_context.startswith(cached_context):
+                    prediction = self.cache[cached_context]
+                    # Check if the prediction continues with what the user typed
+                    added_text = current_context[len(cached_context):]
+                    if prediction.startswith(added_text):
+                        remaining = prediction[len(added_text):]
+                        print(f"Cache Hit! Prefix match ({len(cached_context)} chars) ⚡")
+                        return remaining
 
-                # Check if what they typed matches the start of our previous prediction
-                if self.last_full_prediction.startswith(added_text):
-                    # HIT: The user is typing what we predicted.
-                    # Return the remainder of the prediction without running the GPU.
-                    remaining_prediction = self.last_full_prediction[len(added_text):]
-
-                    # Update cache state so we can keep chaining this logic
-                    self.last_context = current_context
-                    self.last_full_prediction = remaining_prediction
-
-                    return remaining_prediction
-        return None
+            return None
 
     def update(self, context, prediction):
         with self.lock:
-            self.last_context = context
-            self.last_full_prediction = prediction
+            # Clean up old entries if cache is too large
+            if len(self.cache) >= self.max_cache_size:
+                # Remove oldest entries (simple FIFO)
+                oldest_keys = list(self.cache.keys())[:20]  # Remove 20 oldest
+                for key in oldest_keys:
+                    del self.cache[key]
+
+            self.cache[context] = prediction
 
 cache = PredictionCache()
 
@@ -63,6 +68,11 @@ stopping_criteria = StoppingCriteriaList([StopOnNewLine(newline_token_id)])
 class CompletionRequest(BaseModel):
     code_context: str
     multiline: bool = False
+    model_name: str = "shibing624/code-autocomplete-gpt2-base"
+
+class ChatRequest(BaseModel):
+    message: str
+    context: str = ""
 
 @app.post("/predict")
 async def predict(req: CompletionRequest):
@@ -78,22 +88,25 @@ async def predict(req: CompletionRequest):
         input_ids = tokenizer.encode(req.code_context, return_tensors='pt').to(device)
 
         criteria = stopping_criteria if not req.multiline else None
-        max_tokens = 64 if req.multiline else 20
+        max_tokens = 64 if req.multiline else 15  # Reduced from 20 to 15 for faster single-line completions
 
         with torch.no_grad():
             outputs = model.generate(
                 input_ids,
                 max_new_tokens=max_tokens,
 
-                # --- STRICT SETTINGS ---
-                temperature=0.1,        # <--- LOWER THIS (Default 1.0). 0.1 makes it very strict.
-                top_p=0.95,             # <--- Cut off low-probability nonsense.
-                top_k=50,               # <--- Only consider the top 50 likely words.
+                # --- OPTIMIZED SETTINGS FOR SPEED ---
+                temperature=0.05,       # <--- Even lower for faster, more deterministic completions
+                top_p=0.9,              # <--- Slightly lower for faster convergence
+                top_k=40,               # <--- Reduced from 50 for faster processing
                 repetition_penalty=1.0, # <--- KEEP 1.0. High penalty ruins code (prevents repeating 'self', 'def', etc)
                 do_sample=True,
 
                 pad_token_id=tokenizer.eos_token_id,
-                stopping_criteria=criteria
+                stopping_criteria=criteria,
+                # --- PERFORMANCE OPTIMIZATIONS ---
+                use_cache=True,         # Enable KV cache for faster generation
+                num_beams=1,            # Greedy decoding (no beam search for speed)
             )
 
         generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
@@ -110,6 +123,124 @@ async def predict(req: CompletionRequest):
     except Exception as e:
         print(f"Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/models")
+async def get_models():
+    """Return available models with metadata"""
+    return {
+        "models": [
+            {
+                "name": "shibing624/code-autocomplete-gpt2-base",
+                "size": "~493MB",
+                "description": "Fine-tuned GPT-2 model optimized for code completion",
+                "best_for": "General code completion",
+                "performance": "Fast",
+                "quality": "Good"
+            },
+            {
+                "name": "microsoft/DialoGPT-small",
+                "size": "~117MB",
+                "description": "Lightweight conversational model",
+                "best_for": "Simple completions",
+                "performance": "Very Fast",
+                "quality": "Basic"
+            },
+            {
+                "name": "distilgpt2",
+                "size": "~353MB",
+                "description": "Distilled GPT-2 model for faster inference",
+                "best_for": "Balanced performance",
+                "performance": "Fast",
+                "quality": "Good"
+            }
+        ]
+    }
+
+@app.post("/warmup")
+async def warmup():
+    """Warm up the model with a test inference"""
+    try:
+        test_input = "def hello"
+        input_ids = tokenizer.encode(test_input, return_tensors='pt').to(device)
+
+        with torch.no_grad():
+            _ = model.generate(
+                input_ids,
+                max_new_tokens=5,
+                temperature=0.1,
+                top_p=0.9,
+                top_k=40,
+                do_sample=True,
+                pad_token_id=tokenizer.eos_token_id,
+                use_cache=True
+            )
+
+        return {"status": "warmed_up", "message": "Model warmed up successfully"}
+
+    except Exception as e:
+        print(f"Warmup error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/chat")
+async def chat(req: ChatRequest):
+    """Handle chat messages with conversational AI"""
+    try:
+        # Create a conversational prompt
+        system_prompt = "You are a helpful AI coding assistant. Provide clear, concise answers about programming, code explanation, debugging, and software development. Be friendly and professional."
+
+        # Include code context if available
+        context_part = ""
+        if req.context.strip():
+            context_part = f"\n\nCode context:\n{req.context}\n\n"
+
+        full_prompt = f"{system_prompt}{context_part}\nUser: {req.message}\nAssistant:"
+
+        input_ids = tokenizer.encode(full_prompt, return_tensors='pt').to(device)
+
+        with torch.no_grad():
+            outputs = model.generate(
+                input_ids,
+                max_new_tokens=150,  # Longer responses for chat
+                temperature=0.7,     # More creative for conversational responses
+                top_p=0.95,
+                top_k=50,
+                repetition_penalty=1.1,  # Slight penalty to avoid repetition
+                do_sample=True,
+                pad_token_id=tokenizer.eos_token_id,
+                use_cache=True,
+                num_beams=1,
+                # Stop on common conversation endings
+                stopping_criteria=StoppingCriteriaList([
+                    StopOnTokens(tokenizer, ["\nUser:", "\n\n", "###"])
+                ])
+            )
+
+        generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+        response = generated_text[len(full_prompt):].strip()
+
+        # Clean up the response
+        response = response.split('\nUser:')[0].split('\n\n')[0].strip()
+
+        if not response:
+            response = "I understand your question. Could you please provide more details or clarify what you'd like help with?"
+
+        return {"response": response}
+
+    except Exception as e:
+        print(f"Chat error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+class StopOnTokens(StoppingCriteria):
+    def __init__(self, tokenizer, stop_tokens):
+        self.tokenizer = tokenizer
+        self.stop_tokens = stop_tokens
+
+    def __call__(self, input_ids, scores, **kwargs):
+        decoded = self.tokenizer.decode(input_ids[0], skip_special_tokens=True)
+        for stop_token in self.stop_tokens:
+            if stop_token in decoded:
+                return True
+        return False
 
 if __name__ == "__main__":
     import uvicorn

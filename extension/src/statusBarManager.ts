@@ -1,23 +1,50 @@
 import * as vscode from 'vscode';
+import { ServerManager } from './serverManager';
 
 export class StatusBarManager {
     private statusBarItem: vscode.StatusBarItem;
     private isEnabled: boolean = true;
+    private serverRunning: boolean = false;
     private cacheHits = 0;
     private totalRequests = 0;
     private lastResponseTime = 0;
+    private serverManager: ServerManager;
 
-    constructor(context: vscode.ExtensionContext) {
+    constructor(context: vscode.ExtensionContext, serverManager: ServerManager) {
+        this.serverManager = serverManager;
         this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-        this.statusBarItem.command = 'ai-code-companion.showStats';
+        this.statusBarItem.command = 'ai-code-companion.toggle';
         context.subscriptions.push(this.statusBarItem);
         this.updateStatusBarItem();
         this.statusBarItem.show();
 
-        context.subscriptions.push(vscode.commands.registerCommand('ai-code-companion.toggle', () => {
-            this.isEnabled = !this.isEnabled;
+        context.subscriptions.push(vscode.commands.registerCommand('ai-code-companion.toggle', async () => {
+            if (this.serverRunning) {
+                // Stop server
+                this.serverManager.stopServer();
+                this.serverRunning = false;
+                this.isEnabled = false;
+                vscode.window.showInformationMessage('AI Code Companion server stopped');
+            } else {
+                // Start server
+                this.setLoading(true);
+                try {
+                    await this.serverManager.startServer(context);
+                    const serverReady = await this.serverManager.waitForServer();
+                    if (serverReady) {
+                        this.serverRunning = true;
+                        this.isEnabled = true;
+                        vscode.window.showInformationMessage('AI Code Companion server started');
+                    } else {
+                        vscode.window.showErrorMessage('Failed to start AI Code Companion server');
+                    }
+                } catch (error) {
+                    vscode.window.showErrorMessage('Failed to start AI Code Companion server');
+                } finally {
+                    this.setLoading(false);
+                }
+            }
             this.updateStatusBarItem();
-            vscode.window.showInformationMessage(`AI Code Companion is now ${this.isEnabled ? 'ON' : 'OFF'}`);
         }));
 
         context.subscriptions.push(vscode.commands.registerCommand('ai-code-companion.showStats', () => {
@@ -29,15 +56,19 @@ export class StatusBarManager {
     }
 
     private updateStatusBarItem(): void {
-        if (this.isEnabled) {
+        if (this.serverRunning && this.isEnabled) {
             const hitRate = this.totalRequests > 0 ? Math.round((this.cacheHits / this.totalRequests) * 100) : 0;
             this.statusBarItem.text = `$(robot) AI: ${hitRate}%`;
-            this.statusBarItem.tooltip = `AI Code Companion - Cache hit rate: ${hitRate}%\nLast response: ${this.lastResponseTime}ms`;
+            this.statusBarItem.tooltip = `AI Code Companion - Server Running\nCache hit rate: ${hitRate}%\nLast response: ${this.lastResponseTime}ms\nClick to stop server`;
             this.statusBarItem.backgroundColor = undefined;
+        } else if (this.serverRunning && !this.isEnabled) {
+            this.statusBarItem.text = `$(robot) AI: PAUSED`;
+            this.statusBarItem.tooltip = 'AI server is running but completions are disabled\nClick to stop server';
+            this.statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
         } else {
             this.statusBarItem.text = `$(circle-slash) AI: OFF`;
-            this.statusBarItem.tooltip = 'Click to enable AI Code Companion';
-            this.statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
+            this.statusBarItem.tooltip = 'AI server is stopped\nClick to start server';
+            this.statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
         }
     }
 

@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import axios from 'axios';
+import { spawn } from 'child_process';
 import { ServerManager } from './serverManager';
 import { CompletionProvider } from './completionProvider';
 import { StatusBarManager } from './statusBarManager';
@@ -8,6 +9,7 @@ import { AIModelsViewProvider } from './views/aiModelsView';
 import { SettingsViewProvider } from './views/settingsView';
 import { StatisticsViewProvider } from './views/statisticsView';
 import { HistoryViewProvider } from './views/historyView';
+import { ChatViewProvider } from './views/chatView';
 
 // Global instances
 let serverManager: ServerManager;
@@ -15,16 +17,15 @@ let statusBarManager: StatusBarManager;
 let completionHistory: CompletionHistory;
 const activationTime = Date.now();
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
     console.log('AI Code Companion is active!');
 
     // Initialize managers
     serverManager = new ServerManager();
-    statusBarManager = new StatusBarManager(context);
     completionHistory = new CompletionHistory();
+    statusBarManager = new StatusBarManager(context, serverManager);
 
-    // Start Python server
-    serverManager.startServer(context);
+    // Server will be started via status bar toggle when needed
 
     // Register completion provider
     const completionProvider = new CompletionProvider();
@@ -295,7 +296,46 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }));
 
+    context.subscriptions.push(vscode.commands.registerCommand('ai-code-companion.showModelCacheLocation', async () => {
+        try {
+            // Get the Hugging Face cache directory
+            const pythonProcess = spawn('python3', ['-c', 'from transformers import file_utils; print(file_utils.default_cache_path)']);
+
+            let cachePath = '';
+            pythonProcess.stdout.on('data', (data: Buffer) => {
+                cachePath += data.toString().trim();
+            });
+
+            pythonProcess.on('close', (code: number) => {
+                if (code === 0 && cachePath) {
+                    const message = `🤖 AI Models Cache Location:\n\n📁 Directory: ${cachePath}\n\n💡 This is where Hugging Face models are stored locally.\n   Current size: ~6.5GB\n   Default model: ~493MB\n\nTo free space, you can delete this directory, but models will be re-downloaded on next use.`;
+
+                    vscode.window.showInformationMessage(message, 'Open in Finder', 'Copy Path').then(selection => {
+                        if (selection === 'Open in Finder') {
+                            vscode.env.openExternal(vscode.Uri.file(cachePath));
+                        } else if (selection === 'Copy Path') {
+                            vscode.env.clipboard.writeText(cachePath);
+                            vscode.window.showInformationMessage('Cache path copied to clipboard');
+                        }
+                    });
+                } else {
+                    vscode.window.showErrorMessage('Failed to determine model cache location');
+                }
+            });
+
+            pythonProcess.on('error', (error: Error) => {
+                vscode.window.showErrorMessage(`Error getting cache location: ${error.message}`);
+            });
+
+        } catch (error) {
+            vscode.window.showErrorMessage('Failed to get model cache location');
+        }
+    }));
+
     // Register Tree Data Providers for Views
+    const chatViewProvider = new ChatViewProvider(context.extensionUri);
+    context.subscriptions.push(vscode.window.registerWebviewViewProvider(ChatViewProvider.viewType, chatViewProvider));
+
     const aiModelsViewProvider = new AIModelsViewProvider(context);
     context.subscriptions.push(vscode.window.registerTreeDataProvider('ai-models', aiModelsViewProvider));
 
@@ -307,6 +347,11 @@ export function activate(context: vscode.ExtensionContext) {
 
     const historyViewProvider = new HistoryViewProvider(completionHistory);
     context.subscriptions.push(vscode.window.registerTreeDataProvider('ai-history', historyViewProvider));
+
+    // Register setting modification command
+    context.subscriptions.push(vscode.commands.registerCommand('ai-code-companion.modifySetting', async (settingId: string) => {
+        await settingsViewProvider.modifySetting(settingId);
+    }));
 
     // Register view refresh commands
     context.subscriptions.push(vscode.commands.registerCommand('ai-code-companion.refreshModels', () => {
@@ -350,6 +395,18 @@ export function activate(context: vscode.ExtensionContext) {
                 vscode.window.showErrorMessage('Failed to fetch available models. Make sure the server is running.');
             }
         }
+    }));
+
+    // Register chat commands
+    context.subscriptions.push(vscode.commands.registerCommand('ai-code-companion.openChat', async () => {
+        await vscode.commands.executeCommand('workbench.view.extension.ai-code-companion');
+        // Focus on the chat view
+        await vscode.commands.executeCommand('ai-chat.focus');
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('ai-code-companion.clearChat', () => {
+        // This command will be handled by the ChatViewProvider
+        vscode.window.showInformationMessage('Chat cleared');
     }));
 }
 
@@ -548,3 +605,5 @@ function generateStatsDashboardHTML(stats: any): string {
 export function deactivate() {
     serverManager.stopServer();
 }
+
+

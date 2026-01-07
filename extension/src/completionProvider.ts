@@ -26,7 +26,7 @@ export class CompletionProvider implements vscode.InlineCompletionItemProvider {
                 }
 
                 try {
-                    const startLine = Math.max(0, position.line - 10);
+                    const startLine = Math.max(0, position.line - 5); // Reduced from 10 to 5 lines for faster processing
                     const range = new vscode.Range(startLine, 0, position.line, position.character);
                     const contextText = document.getText(range);
 
@@ -84,7 +84,7 @@ export class CompletionProvider implements vscode.InlineCompletionItemProvider {
                     }
                     resolve([]);
                 }
-            }, 300);
+            }, 150);
         });
     }
 

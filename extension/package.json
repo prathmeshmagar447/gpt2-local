@@ -2,7 +2,7 @@
   "name": "prathmesh-ai-companion",
   "displayName": "Prathmesh AI Companion",
   "description": "Professional AI-powered code completion with multiple models, advanced analytics, and enterprise features",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "publisher": "PrathmeshMagar",
   "repository": {
     "type": "git",
@@ -101,18 +101,29 @@
         "command": "ai-code-companion.testConnection",
         "title": "Test Server Connection",
         "category": "AI Code Companion"
+      },
+      {
+        "command": "ai-code-companion.showModelCacheLocation",
+        "title": "Show Model Cache Location",
+        "category": "AI Code Companion"
+      },
+      {
+        "command": "ai-code-companion.modifySetting",
+        "title": "Modify Setting",
+        "category": "AI Code Companion"
+      },
+      {
+        "command": "ai-code-companion.openChat",
+        "title": "AI Code: Open Chat",
+        "category": "AI Code Companion"
+      },
+      {
+        "command": "ai-code-companion.clearChat",
+        "title": "Clear Chat",
+        "icon": "$(clear-all)",
+        "category": "AI Code Companion"
       }
     ],
-    "views": {
-      "explorer": [
-        {
-          "id": "ai-code-companion-explorer",
-          "name": "AI Code Companion",
-          "icon": "$(robot)",
-          "contextualTitle": "AI Code Companion"
-        }
-      ]
-    },
     "viewsContainers": {
       "activitybar": [
         {
@@ -124,6 +135,11 @@
     },
     "views": {
       "ai-code-companion": [
+        {
+          "id": "ai-chat",
+          "name": "AI Chat",
+          "icon": "$(comment-discussion)"
+        },
         {
           "id": "ai-models",
           "name": "AI Models",

@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { spawn, ChildProcess } from 'child_process';
 import * as path from 'path';
+import axios from 'axios';
 
 export class ServerManager {
     private serverProcess: ChildProcess | undefined;
@@ -50,6 +51,30 @@ export class ServerManager {
 
     isRunning(): boolean {
         return this.serverProcess !== undefined && !this.serverProcess.killed;
+    }
+
+    async waitForServer(maxRetries: number = 30, delayMs: number = 1000): Promise<boolean> {
+        for (let i = 0; i < maxRetries; i++) {
+            try {
+                await axios.get('http://127.0.0.1:8000/models', { timeout: 2000 });
+                console.log('Server is ready! Warming up model...');
+
+                // Warm up the model for better performance
+                try {
+                    await axios.post('http://127.0.0.1:8000/warmup', {}, { timeout: 10000 });
+                    console.log('Model warmed up successfully!');
+                } catch (warmupError: any) {
+                    console.warn('Model warmup failed, but server is ready:', warmupError.message);
+                }
+
+                return true;
+            } catch (error) {
+                console.log(`Waiting for server... (${i + 1}/${maxRetries})`);
+                await new Promise(resolve => setTimeout(resolve, delayMs));
+            }
+        }
+        console.error('Server failed to start within timeout');
+        return false;
     }
 
     private findPythonPath(): string {

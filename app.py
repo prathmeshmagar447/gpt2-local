@@ -1,2 +1,5 @@
 print('')
-print
+print('')
+print('')
+print('hello')
+print('')

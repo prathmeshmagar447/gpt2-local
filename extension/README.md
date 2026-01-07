@@ -1,134 +1,229 @@
-# GPT-2 Code Autocomplete (Local Copilot)
+# 🤖 GPT-2 Local Autocomplete
 
-A local, privacy-focused AI code completion extension for VS Code. This tool mimics the "Ghost Text" experience of GitHub Copilot but runs entirely on your local machine using the `shibing624/code-autocomplete-gpt2-base` model.
+<div align="center">
 
-## 🚀 Features
+**VS Code Extension for Local AI Code Completion**
 
-* **Ghost Text UI:** Renders suggestions inline (grey text) rather than a dropdown menu.
-* **Privacy First:** No code leaves your machine. All inference happens locally.
-* **Smart Caching:** Implements a "Prefix Cache" in the backend. If you type `imp` -> `impo` -> `impor`, the backend serves the cached prediction instantly without re-running the GPU.
-* **Optimized Inference:** Uses `StoppingCriteria` to halt generation immediately at newlines, reducing GPU load by ~80% for single-line completions.
-* **Debouncing & Cancellation:** Automatically cancels stale API requests when you type fast to prevent server overload.
+*A lightweight VS Code extension that provides AI-powered code completion through a local Python backend.*
 
----
+[![Version](https://img.shields.io/badge/Version-0.0.1-orange.svg)](https://github.com/prathmeshmagar447/gpt2-local)
+[![VS Code Marketplace](https://img.shields.io/badge/VS_Code-Marketplace-blue?logo=visual-studio-code)](https://marketplace.visualstudio.com/)
 
-## 🛠️ Architecture
-
-The project consists of two parts:
-
-1. **Python Backend (`server.py`):** A FastAPI server that loads the GPT-2 model and handles inference requests.
-2. **VS Code Extension (`src/extension.ts`):** The client that captures your cursor position, sends text to the backend, and renders the result.
+</div>
 
 ---
 
-## 📦 Installation & Setup
+## 📋 **About This Extension**
 
-### Part 1: The Python Backend
+This is the **VS Code extension component** of GPT-2 Local Copilot. It provides the frontend interface for AI-powered code completion while keeping all AI processing local to your machine.
 
-1. **Prerequisites:** Python 3.8+ installed.
-2. **Install Dependencies:**
-```bash
-pip install fastapi uvicorn transformers torch
+### **Key Features**
+- 🎨 **Ghost Text UI**: Inline code suggestions as you type
+- ⚡ **Real-time Completion**: Debounced requests with 300ms delay
+- 🔄 **Smart Caching**: Reuses predictions for consecutive typing
+- 🎯 **Multi-line Support**: Intelligent detection for functions and classes
+- 📊 **Status Bar Integration**: Visual toggle for extension control
+- 🔧 **Auto Server Management**: Automatically starts/stops Python backend
+
+---
+
+## 🛠️ **Technical Details**
+
+### **Architecture**
+```
+VS Code Extension (TypeScript)
+├── Inline Completion Provider
+├── Status Bar Integration
+├── Process Management
+└── HTTP Client (Axios)
 ```
 
-*(Note: If you have an NVIDIA GPU, ensure you install the CUDA version of PyTorch for faster inference.)*
-3. **Run the Server:**
-Save the provided backend code as `server.py` and run:
+### **Requirements**
+- **VS Code**: 1.80.0 or later
+- **Python Backend**: Running on `http://127.0.0.1:8000`
+- **Dependencies**: Axios for HTTP requests
+
+### **Supported Languages**
+- ✅ Python (optimized)
+- ✅ JavaScript/TypeScript
+- ✅ General programming languages
+
+---
+
+## 🚀 **Quick Start**
+
+### **Development Mode**
 ```bash
-python server.py
-```
+# Clone the repository
+git clone https://github.com/prathmeshmagar447/gpt2-local.git
+cd gpt2-local/extension
 
-*You should see: `Model loaded on cuda` (or cpu) and the server running on `http://127.0.0.1:8000`.*
-
-### Part 2: The VS Code Extension
-
-1. **Prerequisites:** Node.js and npm installed.
-2. **Install Dependencies:**
-Navigate to your extension folder (where `package.json` is) and run:
-```bash
+# Install dependencies
 npm install
+
+# Compile TypeScript
+npm run compile
+
+# Open in VS Code and press F5
+code .
 ```
 
-3. **Build & Run:**
-* Open the project folder in VS Code.
-* Press **F5**. This will open a new "Extension Development Host" window with your extension loaded.
+### **Using the Extension**
+1. **Start Backend**: Ensure Python server is running
+2. **Launch Extension**: Press `F5` in VS Code
+3. **Start Coding**: Open any code file and begin typing
+4. **Accept Suggestions**: Press `Tab` to accept ghost text
 
-### Part 3: Packaging for Distribution (Optional)
+---
 
-To create a distributable `.vsix` file:
+## ⚙️ **Configuration**
 
-1. **Install VSCE:**
-```bash
-npm install -g @vscode/vsce
-```
+### **Extension Settings**
+Access via VS Code Settings (`Ctrl/Cmd + ,`):
 
-2. **Update package.json:**
-Add these required fields to your `extension/package.json`:
 ```json
 {
-  "publisher": "your-name",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/yourname/gpt2-local"
-  }
+  "codeCompletion.serverUrl": "http://127.0.0.1:8000"
 }
 ```
 
-3. **Package:**
+### **Status Bar**
+- **$(zap) GPT-2: ON**: Extension active
+- **$(circle-slash) GPT-2: OFF**: Extension disabled
+- **Click** to toggle on/off
+
+---
+
+## 🔧 **Development**
+
+### **Project Structure**
+```
+extension/
+├── src/
+│   └── extension.ts      # Main extension logic
+├── out/                  # Compiled JavaScript (generated)
+├── package.json          # Extension manifest
+├── tsconfig.json         # TypeScript configuration
+└── icon.svg              # Extension icon
+```
+
+### **Available Scripts**
 ```bash
-cd extension
+npm run compile      # Build TypeScript to JavaScript
+npm run watch        # Watch mode compilation
+npm run pretest      # Run linting before tests
+npm run lint         # ESLint code checking
+```
+
+### **Building for Distribution**
+```bash
+# Install VS Code Extension CLI
+npm install -g @vscode/vsce
+
+# Package extension
 vsce package
+
+# Publish to marketplace
+vsce publish
 ```
 
-4. **Install:**
-In VS Code: Extensions → Install from VSIX... → Select the generated `.vsix` file
-
-*Note: The packaged extension requires the Python server to be running separately.*
-
 ---
 
-## 🎮 Usage
+## 🔌 **API Integration**
 
-1. Ensure the Python server is running in a terminal.
-2. In the VS Code Extension window (the one that opened after pressing F5), create a new file (e.g., `test.py`).
-3. Start typing code. For example:
-```python
-def calculate_area(radius):
+The extension communicates with the Python backend via HTTP:
+
+### **Request Format**
+```typescript
+POST /predict
+{
+  "code_context": "def hello",
+  "multiline": false
+}
 ```
 
-4. Wait a split second (300ms debounce). You will see **grey ghost text** appear.
-5. Press **`Tab`** to accept the suggestion.
+### **Response Format**
+```typescript
+{
+  "completion": "_world():\n    return 'Hello World'"
+}
+```
+
+### **Error Handling**
+- Automatic retry on connection failures
+- Graceful degradation when server is unavailable
+- Detailed logging in VS Code Output panel
 
 ---
 
-## ⚙️ Configuration (Advanced)
+## 🐛 **Troubleshooting**
 
-### GPU vs CPU
+### **Extension Issues**
+| Problem | Solution |
+|---------|----------|
+| **Extension not activating** | Check VS Code version (1.80+) |
+| **No suggestions appear** | Verify Python server is running |
+| **Status bar not visible** | Restart VS Code or reload window |
+| **Compilation errors** | Run `npm install` and `npm run compile` |
 
-The `server.py` script automatically detects if CUDA is available.
-
-* **GPU:** Response time ~50-100ms.
-* **CPU:** Response time ~300ms-1s (depending on hardware).
-
-### Adjusting Strictness
-
-In `server.py`, modify the `temperature` parameter inside `predict()`:
-
-* `0.1 - 0.2`: Very strict, deterministic code (Recommended).
-* `0.5+`: More creative, but higher risk of syntax errors.
-
----
-
-## 🐛 Troubleshooting
-
-| Issue | Solution |
-| --- | --- |
-| **No suggestions appear** | Check if `server.py` is running. Check VS Code "Output" tab -> select "Log (Extension Host)" to see if there are connection errors. |
-| **Server crashes with OOM** | Your GPU might be out of memory. Try forcing CPU mode by setting `device = "cpu"` in `server.py`. |
-| **Suggestions are too long** | The `StoppingCriteria` logic handles this. Ensure `multiline` is set to `False` in the request (default). |
+### **Debug Information**
+- **Logs**: View → Output → Log (Extension Host)
+- **Server Status**: Check `http://127.0.0.1:8000/docs`
+- **Network**: Test with curl: `curl -X POST http://127.0.0.1:8000/predict -H "Content-Type: application/json" -d '{"code_context": "test", "multiline": false}'`
 
 ---
 
-## 📜 License
+## 📊 **Performance**
 
-MIT
+### **Response Times**
+- **Cache Hit**: ~10-50ms
+- **GPU Inference**: ~50-200ms
+- **CPU Inference**: ~200-800ms
+
+### **Resource Usage**
+- **Memory**: ~50MB (extension only)
+- **Network**: Localhost HTTP requests
+- **CPU**: Minimal background processing
+
+---
+
+## 🤝 **Contributing**
+
+### **Code Contributions**
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+### **Extension Development**
+- Follow TypeScript best practices
+- Use ESLint configuration
+- Test on multiple platforms
+- Document new features
+
+### **Reporting Issues**
+- Use GitHub Issues for bugs
+- Include VS Code version and OS
+- Provide steps to reproduce
+- Attach relevant logs
+
+---
+
+## 📄 **License**
+
+**MIT License** - See main repository for details.
+
+## 🔗 **Links**
+
+- **Main Repository**: https://github.com/prathmeshmagar447/gpt2-local
+- **Issues**: https://github.com/prathmeshmagar447/gpt2-local/issues
+- **Documentation**: https://github.com/prathmeshmagar447/gpt2-local#readme
+
+---
+
+<div align="center">
+
+*Part of the GPT-2 Local Copilot project*
+
+</div>

@@ -58,9 +58,42 @@ class ModelManager:
 
     def get_available_models(self) -> list:
         return [
-            "shibing624/code-autocomplete-gpt2-base",  # Default
-            "microsoft/DialoGPT-medium",  # Alternative GPT-2 model
-            "distilgpt2",  # Smaller/faster model
+            {
+                "name": "shibing624/code-autocomplete-gpt2-base",
+                "description": "GPT-2 fine-tuned for code completion (Recommended)",
+                "size": "117M parameters",
+                "best_for": "General code completion"
+            },
+            {
+                "name": "Salesforce/codegen-350M-mono",
+                "description": "CodeGen model trained on Python code",
+                "size": "350M parameters",
+                "best_for": "Python-focused completion"
+            },
+            {
+                "name": "Salesforce/codegen-2B-mono",
+                "description": "Larger CodeGen model for better quality",
+                "size": "2B parameters",
+                "best_for": "High-quality completion (requires more RAM)"
+            },
+            {
+                "name": "bigcode/gpt_bigcode-santacoder",
+                "description": "SantaCoder from BigCode project",
+                "size": "1.1B parameters",
+                "best_for": "Multi-language code completion"
+            },
+            {
+                "name": "distilgpt2",
+                "description": "Lightweight distilled GPT-2",
+                "size": "82M parameters",
+                "best_for": "Fast completion on limited hardware"
+            },
+            {
+                "name": "microsoft/DialoGPT-medium",
+                "description": "Dialog-optimized GPT-2",
+                "size": "345M parameters",
+                "best_for": "Conversational code patterns"
+            }
         ]
 
 # Initialize model manager

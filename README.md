@@ -35,8 +35,10 @@ GPT-2 Local Copilot is a **privacy-focused** alternative to GitHub Copilot that 
 - Press `Tab` to accept suggestions instantly
 
 ### 🧠 **Advanced AI Engine**
-- **Multiple Models**: Support for GPT-2 variants, DialoGPT, DistilGPT2 with automatic downloading
-- **Model Switching**: Change models on-the-fly via command palette or settings
+- **6 Specialized Models**: From lightweight 82M to powerful 2B parameter models
+- **Automatic Downloading**: Models download on first use, cached locally for offline use
+- **Smart Model Selection**: Choose based on hardware, speed vs quality preferences
+- **Dynamic Switching**: Change models instantly via command palette or settings
 - **Configurable Parameters**: Temperature, top-p, top-k, max tokens via settings
 - **8-bit Quantization**: Memory optimization with `bitsandbytes` support
 - **Smart Caching**: Model-aware caching for optimal performance
@@ -233,6 +235,24 @@ Access via VS Code Settings (`Ctrl/Cmd + ,`) or use `GPT-2: Open Settings` comma
 - `GPT-2: Show Stats` - Display performance metrics
 - `GPT-2: Open Settings` - Open extension settings
 - `GPT-2: Switch Model` - Select and switch between different AI models
+
+### **Available Models**
+
+| Model | Size | Best For | Description |
+|-------|------|----------|-------------|
+| **shibing624/code-autocomplete-gpt2-base** | 117M | General code completion | Default model, fine-tuned for code completion |
+| **Salesforce/codegen-350M-mono** | 350M | Python-focused | CodeGen model trained specifically on Python code |
+| **Salesforce/codegen-2B-mono** | 2B | High-quality completion | Larger CodeGen model for superior quality (requires more RAM) |
+| **bigcode/gpt_bigcode-santacoder** | 1.1B | Multi-language | SantaCoder from BigCode project, supports multiple languages |
+| **distilgpt2** | 82M | Fast completion | Lightweight distilled model for limited hardware |
+| **microsoft/DialoGPT-medium** | 345M | Conversational patterns | Dialog-optimized model for conversational code patterns |
+
+**Model Selection Guide:**
+- 🏃 **Speed Priority**: Use `distilgpt2` (82M) for fastest completion
+- ⚖️ **Balanced**: Use `shibing624/code-autocomplete-gpt2-base` (117M) for general use
+- 🐍 **Python Focus**: Use `Salesforce/codegen-350M-mono` (350M) for Python development
+- 🌟 **Best Quality**: Use `Salesforce/codegen-2B-mono` (2B) for highest quality (requires powerful GPU)
+- 🌍 **Multi-Language**: Use `bigcode/gpt_bigcode-santacoder` (1.1B) for various programming languages
 
 ### **Performance Tuning**
 

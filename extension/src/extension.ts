@@ -62,14 +62,24 @@ export function activate(context: vscode.ExtensionContext) {
             const response = await axios.get('http://127.0.0.1:8000/models', { timeout: 5000 });
             const models = response.data.models;
 
-            const selectedModel = await vscode.window.showQuickPick(models, {
-                placeHolder: 'Select AI model for code completion'
+            // Create quick pick items with descriptions
+            const quickPickItems = models.map((model: any) => ({
+                label: model.name.split('/').pop() || model.name, // Show short name
+                description: model.size,
+                detail: `${model.description} - ${model.best_for}`,
+                modelName: model.name
+            } as vscode.QuickPickItem & { modelName: string }));
+
+            const selectedItem = await vscode.window.showQuickPick(quickPickItems, {
+                placeHolder: 'Select AI model for code completion',
+                matchOnDescription: true,
+                matchOnDetail: true
             });
 
-            if (selectedModel) {
+            if (selectedItem) {
                 const config = vscode.workspace.getConfiguration('codeCompletion');
-                await config.update('modelName', selectedModel, vscode.ConfigurationTarget.Global);
-                vscode.window.showInformationMessage(`Switched to model: ${selectedModel}`);
+                await config.update('modelName', selectedItem.modelName, vscode.ConfigurationTarget.Global);
+                vscode.window.showInformationMessage(`Switched to model: ${selectedItem.label} (${selectedItem.description})`);
             }
         } catch (error) {
             vscode.window.showErrorMessage('Failed to fetch available models. Make sure the server is running.');

@@ -4,9 +4,11 @@
 
 **Professional AI-Powered Code Completion for VS Code**
 
+[![Marketplace](https://img.shields.io/badge/VS_Code_Marketplace-Install-blue?logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=PrathmeshMagar.prathmesh-ai-companion)
 [![GitHub Repo](https://img.shields.io/badge/GitHub-Repository-blue?logo=github)](https://github.com/prathmeshmagar447/gpt2-local)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![VS Code](https://img.shields.io/badge/VS_Code-Extension-purple?logo=visual-studio-code)](https://marketplace.visualstudio.com/)
+[![Version](https://img.shields.io/badge/Version-0.0.1-green.svg)](https://marketplace.visualstudio.com/items?itemName=PrathmeshMagar.prathmesh-ai-companion)
+[![Published](https://img.shields.io/badge/Published-Live-brightgreen.svg)](https://marketplace.visualstudio.com/items?itemName=PrathmeshMagar.prathmesh-ai-companion)
 
 *Enterprise-grade AI code completion with 6 specialized models. Runs locally for maximum privacy and performance.*
 
@@ -97,13 +99,24 @@ AI Code Companion is a **professional, enterprise-grade** AI coding assistant th
 
 ## 📦 **Installation**
 
-### **Prerequisites**
+### **From VS Code Marketplace (Recommended)**
+🛍️ **Direct Installation**: [Install from VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=PrathmeshMagar.prathmesh-ai-companion)
+
+**Quick Install:**
+1. Open VS Code
+2. Press `Ctrl+Shift+X` (or `Cmd+Shift+X` on Mac) to open Extensions
+3. Search for "Prathmesh AI Companion"
+4. Click **Install**
+
+### **Manual Installation (Development)**
+
+#### **Prerequisites**
 - **Python 3.8+** with pip
 - **Node.js 16+** with npm
 - **VS Code 1.80+**
 - **Optional**: NVIDIA GPU with CUDA for faster inference
 
-### **One-Command Setup**
+#### **One-Command Setup**
 
 ```bash
 # Clone the repository

@@ -7,34 +7,69 @@ from typing import Optional, Dict, Any
 
 app = FastAPI()
 
-# --- MODEL SETUP ---
-model_name = "shibing624/code-autocomplete-gpt2-base"
-device = "cuda" if torch.cuda.is_available() else "cpu"
-use_quantization = False  # Set to True for 8-bit quantization (requires bitsandbytes)
+# --- MULTI-MODEL MANAGER ---
+class ModelManager:
+    def __init__(self):
+        self.models = {}
+        self.tokenizers = {}
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
-print(f"Loading model on {device} with quantization={use_quantization}...")
-tokenizer = GPT2Tokenizer.from_pretrained(model_name)
+    def load_model(self, model_name: str, use_quantization: bool = False) -> tuple:
+        if model_name in self.models:
+            print(f"Using cached model: {model_name}")
+            return self.models[model_name], self.tokenizers[model_name]
 
-if use_quantization and device == "cuda":
-    try:
-        from transformers import BitsAndBytesConfig
-        quantization_config = BitsAndBytesConfig(
-            load_in_8bit=True,
-            llm_int8_enable_fp32_cpu_offload=True
-        )
-        model = GPT2LMHeadModel.from_pretrained(
-            model_name,
-            quantization_config=quantization_config,
-            device_map="auto"
-        )
-        print("Model loaded with 8-bit quantization.")
-    except ImportError:
-        print("bitsandbytes not installed. Falling back to standard loading.")
-        model = GPT2LMHeadModel.from_pretrained(model_name).to(device)
-        print("Model loaded (standard).")
-else:
-    model = GPT2LMHeadModel.from_pretrained(model_name).to(device)
-    print("Model loaded (standard).")
+        print(f"Downloading and loading model: {model_name} on {self.device}...")
+
+        try:
+            # Load tokenizer
+            tokenizer = GPT2Tokenizer.from_pretrained(model_name)
+
+            # Load model with optional quantization
+            if use_quantization and self.device == "cuda":
+                try:
+                    from transformers import BitsAndBytesConfig
+                    quantization_config = BitsAndBytesConfig(
+                        load_in_8bit=True,
+                        llm_int8_enable_fp32_cpu_offload=True
+                    )
+                    model = GPT2LMHeadModel.from_pretrained(
+                        model_name,
+                        quantization_config=quantization_config,
+                        device_map="auto"
+                    )
+                    print(f"Model {model_name} loaded with 8-bit quantization.")
+                except ImportError:
+                    print("bitsandbytes not available. Loading standard model.")
+                    model = GPT2LMHeadModel.from_pretrained(model_name).to(self.device)
+            else:
+                model = GPT2LMHeadModel.from_pretrained(model_name).to(self.device)
+                print(f"Model {model_name} loaded (standard).")
+
+            # Cache the model
+            self.models[model_name] = model
+            self.tokenizers[model_name] = tokenizer
+
+            return model, tokenizer
+
+        except Exception as e:
+            print(f"Failed to load model {model_name}: {e}")
+            raise
+
+    def get_available_models(self) -> list:
+        return [
+            "shibing624/code-autocomplete-gpt2-base",  # Default
+            "microsoft/DialoGPT-medium",  # Alternative GPT-2 model
+            "distilgpt2",  # Smaller/faster model
+        ]
+
+# Initialize model manager
+model_manager = ModelManager()
+
+# Default model setup
+default_model_name = "shibing624/code-autocomplete-gpt2-base"
+current_model_name = default_model_name
+model, tokenizer = model_manager.load_model(default_model_name, False)
 
 # --- CACHE SETUP ---
 import hashlib
@@ -109,18 +144,41 @@ class CompletionRequest(BaseModel):
     multiline: bool = False
     model_name: Optional[str] = None  # Allow dynamic model switching
 
+@app.get("/models")
+async def get_available_models() -> Dict[str, Any]:
+    """Get list of available models"""
+    return {
+        "models": model_manager.get_available_models(),
+        "current_default": default_model_name,
+        "device": model_manager.device
+    }
+
 @app.post("/predict")
 async def predict(req: CompletionRequest) -> Dict[str, Any]:
+    global model, tokenizer, current_model_name  # Allow switching models
+
     try:
-        # 1. CHECK CACHE FIRST
+        # Determine which model to use
+        requested_model = req.model_name or default_model_name
+
+        # Load/switch model if different from current
+        if requested_model != current_model_name:
+            print(f"Switching to model: {requested_model}")
+            model, tokenizer = model_manager.load_model(requested_model, False)
+            current_model_name = requested_model
+            # Update stopping criteria for new tokenizer
+            newline_token_id = tokenizer.encode("\n")[0]
+            stopping_criteria = StoppingCriteriaList([StopOnNewLine(newline_token_id)])
+
+        # 1. CHECK CACHE FIRST (model-specific cache would be better but simplified for now)
         cached_result = cache.check_cache(req.code_context)
         if cached_result is not None:
             print("Cache Hit! ⚡")
             return {"completion": cached_result}
 
         # 2. RUN INFERENCE (If cache miss)
-        print("Cache Miss - Running GPU...")
-        input_ids = tokenizer.encode(req.code_context, return_tensors='pt').to(device)
+        print(f"Cache Miss - Running inference with {requested_model}...")
+        input_ids = tokenizer.encode(req.code_context, return_tensors='pt').to(model_manager.device)
 
         criteria = stopping_criteria if not req.multiline else None
         max_tokens = 64 if req.multiline else 20

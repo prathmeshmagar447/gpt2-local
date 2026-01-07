@@ -38,9 +38,14 @@ export class CompletionProvider implements vscode.InlineCompletionItemProvider {
                     // Determine if this is likely a multiline completion
                     const isMultiline = this.detectMultiline(document, position);
 
+                    // Get model from VS Code settings
+                    const config = vscode.workspace.getConfiguration('codeCompletion');
+                    const modelName = config.get<string>('modelName', 'shibing624/code-autocomplete-gpt2-base');
+
                     const response = await axios.post('http://127.0.0.1:8000/predict', {
                         code_context: contextText,
-                        multiline: isMultiline
+                        multiline: isMultiline,
+                        model_name: modelName
                     }, {
                         cancelToken: this.cancelTokenSource.token,
                         timeout: 2000

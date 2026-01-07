@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import axios from 'axios';
 import { ServerManager } from './serverManager';
 import { CompletionProvider } from './completionProvider';
 import { StatusBarManager } from './statusBarManager';
@@ -54,6 +55,25 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(vscode.commands.registerCommand('gpt2-autocomplete.openSettings', () => {
         vscode.commands.executeCommand('workbench.action.openSettings', 'codeCompletion');
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('gpt2-autocomplete.switchModel', async () => {
+        try {
+            const response = await axios.get('http://127.0.0.1:8000/models', { timeout: 5000 });
+            const models = response.data.models;
+
+            const selectedModel = await vscode.window.showQuickPick(models, {
+                placeHolder: 'Select AI model for code completion'
+            });
+
+            if (selectedModel) {
+                const config = vscode.workspace.getConfiguration('codeCompletion');
+                await config.update('modelName', selectedModel, vscode.ConfigurationTarget.Global);
+                vscode.window.showInformationMessage(`Switched to model: ${selectedModel}`);
+            }
+        } catch (error) {
+            vscode.window.showErrorMessage('Failed to fetch available models. Make sure the server is running.');
+        }
     }));
 }
 

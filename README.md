@@ -35,10 +35,11 @@ GPT-2 Local Copilot is a **privacy-focused** alternative to GitHub Copilot that 
 - Press `Tab` to accept suggestions instantly
 
 ### 🧠 **Advanced AI Engine**
-- **Model**: Uses `shibing624/code-autocomplete-gpt2-base` - fine-tuned for code generation
-- **Multi-Model Support**: Foundation for CodeLlama, StarCoder, and other models
+- **Multiple Models**: Support for GPT-2 variants, DialoGPT, DistilGPT2 with automatic downloading
+- **Model Switching**: Change models on-the-fly via command palette or settings
 - **Configurable Parameters**: Temperature, top-p, top-k, max tokens via settings
 - **8-bit Quantization**: Memory optimization with `bitsandbytes` support
+- **Smart Caching**: Model-aware caching for optimal performance
 - **Context Awareness**: Analyzes surrounding code for intelligent suggestions
 
 ### ⚡ **Enterprise Performance**
@@ -231,6 +232,7 @@ Access via VS Code Settings (`Ctrl/Cmd + ,`) or use `GPT-2: Open Settings` comma
 - `GPT-2: Show History` - View recent completion history
 - `GPT-2: Show Stats` - Display performance metrics
 - `GPT-2: Open Settings` - Open extension settings
+- `GPT-2: Switch Model` - Select and switch between different AI models
 
 ### **Performance Tuning**
 

@@ -70,4 +70,15 @@ export class StatusBarManager {
     getTotalRequests(): number {
         return this.totalRequests;
     }
+
+    getLastResponseTime(): number {
+        return this.lastResponseTime;
+    }
+
+    resetCache(): void {
+        this.cacheHits = 0;
+        this.totalRequests = 0;
+        this.lastResponseTime = 0;
+        this.updateStatusBarItem();
+    }
 }

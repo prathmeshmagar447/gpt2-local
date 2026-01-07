@@ -75,8 +75,98 @@
         "command": "ai-code-companion.showCompletionStats",
         "title": "AI Code: Show Completion Statistics",
         "category": "AI Code Companion"
+      },
+      {
+        "command": "ai-code-companion.refreshModels",
+        "title": "Refresh",
+        "icon": "$(refresh)",
+        "category": "AI Code Companion"
+      },
+      {
+        "command": "ai-code-companion.openModelDocs",
+        "title": "Open Model Documentation",
+        "category": "AI Code Companion"
+      },
+      {
+        "command": "ai-code-companion.copyCompletion",
+        "title": "Copy Completion",
+        "category": "AI Code Companion"
+      },
+      {
+        "command": "ai-code-companion.clearCache",
+        "title": "Clear Cache",
+        "category": "AI Code Companion"
+      },
+      {
+        "command": "ai-code-companion.testConnection",
+        "title": "Test Server Connection",
+        "category": "AI Code Companion"
       }
     ],
+    "views": {
+      "explorer": [
+        {
+          "id": "ai-code-companion-explorer",
+          "name": "AI Code Companion",
+          "icon": "$(robot)",
+          "contextualTitle": "AI Code Companion"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "ai-code-companion",
+          "title": "AI Code Companion",
+          "icon": "$(robot)"
+        }
+      ]
+    },
+    "views": {
+      "ai-code-companion": [
+        {
+          "id": "ai-models",
+          "name": "AI Models",
+          "icon": "$(hubot)"
+        },
+        {
+          "id": "ai-settings",
+          "name": "Settings",
+          "icon": "$(settings-gear)"
+        },
+        {
+          "id": "ai-statistics",
+          "name": "Statistics",
+          "icon": "$(graph)"
+        },
+        {
+          "id": "ai-history",
+          "name": "Completion History",
+          "icon": "$(history)"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "ai-code-companion.refreshModels",
+          "when": "view == ai-models",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "ai-code-companion.switchModel",
+          "when": "view == ai-models && viewItem == modelItem",
+          "group": "inline"
+        },
+        {
+          "command": "ai-code-companion.openModelDocs",
+          "when": "view == ai-models && viewItem == modelItem",
+          "group": "inline"
+        }
+      ]
+    },
     "configuration": {
       "title": "Code Completion",
       "properties": {

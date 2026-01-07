@@ -4,6 +4,10 @@ import { ServerManager } from './serverManager';
 import { CompletionProvider } from './completionProvider';
 import { StatusBarManager } from './statusBarManager';
 import { CompletionHistory } from './completionHistory';
+import { AIModelsViewProvider } from './views/aiModelsView';
+import { SettingsViewProvider } from './views/settingsView';
+import { StatisticsViewProvider } from './views/statisticsView';
+import { HistoryViewProvider } from './views/historyView';
 
 // Global instances
 let serverManager: ServerManager;
@@ -257,6 +261,94 @@ export function activate(context: vscode.ExtensionContext) {
             panel.webview.html = generateModelManagerHTML(models);
         } catch (error) {
             panel.webview.html = `<h2>Error: Cannot connect to server</h2><p>Make sure the AI Code Companion server is running.</p>`;
+        }
+    }));
+
+    // Register additional commands for views
+    context.subscriptions.push(vscode.commands.registerCommand('ai-code-companion.refreshModels', () => {
+        // Refresh will be handled by individual view providers
+        vscode.window.showInformationMessage('Refreshing AI Models view...');
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('ai-code-companion.openModelDocs', (modelName: string) => {
+        const url = `https://huggingface.co/${modelName}`;
+        vscode.env.openExternal(vscode.Uri.parse(url));
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('ai-code-companion.copyCompletion', (text: string) => {
+        vscode.env.clipboard.writeText(text);
+        vscode.window.showInformationMessage('Completion copied to clipboard');
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('ai-code-companion.clearCache', () => {
+        // Reset cache counters
+        statusBarManager.resetCache();
+        vscode.window.showInformationMessage('Cache cleared successfully');
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('ai-code-companion.testConnection', async () => {
+        try {
+            const response = await axios.get('http://127.0.0.1:8000/docs', { timeout: 5000 });
+            vscode.window.showInformationMessage('✅ Server connection successful');
+        } catch (error) {
+            vscode.window.showErrorMessage('❌ Server connection failed. Make sure the Python server is running.');
+        }
+    }));
+
+    // Register Tree Data Providers for Views
+    const aiModelsViewProvider = new AIModelsViewProvider(context);
+    context.subscriptions.push(vscode.window.registerTreeDataProvider('ai-models', aiModelsViewProvider));
+
+    const settingsViewProvider = new SettingsViewProvider(context);
+    context.subscriptions.push(vscode.window.registerTreeDataProvider('ai-settings', settingsViewProvider));
+
+    const statisticsViewProvider = new StatisticsViewProvider(context, statusBarManager, completionHistory);
+    context.subscriptions.push(vscode.window.registerTreeDataProvider('ai-statistics', statisticsViewProvider));
+
+    const historyViewProvider = new HistoryViewProvider(completionHistory);
+    context.subscriptions.push(vscode.window.registerTreeDataProvider('ai-history', historyViewProvider));
+
+    // Register view refresh commands
+    context.subscriptions.push(vscode.commands.registerCommand('ai-code-companion.refreshModels', () => {
+        aiModelsViewProvider.refresh();
+    }));
+
+    // Handle model switching from views
+    context.subscriptions.push(vscode.commands.registerCommand('ai-code-companion.switchModel', async (modelName?: string) => {
+        if (modelName) {
+            // Direct model switch from view
+            const config = vscode.workspace.getConfiguration('codeCompletion');
+            await config.update('modelName', modelName, vscode.ConfigurationTarget.Global);
+            aiModelsViewProvider.refresh();
+            vscode.window.showInformationMessage(`Switched to model: ${modelName.split('/').pop()}`);
+        } else {
+            // Show model picker (existing logic)
+            try {
+                const response = await axios.get('http://127.0.0.1:8000/models', { timeout: 5000 });
+                const models = response.data.models;
+
+                const quickPickItems = models.map((model: any) => ({
+                    label: model.name.split('/').pop() || model.name,
+                    description: model.size,
+                    detail: `${model.description} - ${model.best_for}`,
+                    modelName: model.name
+                })) as (vscode.QuickPickItem & { modelName: string })[];
+
+                const selectedItem = await vscode.window.showQuickPick(quickPickItems, {
+                    placeHolder: 'Select AI model for code completion',
+                    matchOnDescription: true,
+                    matchOnDetail: true
+                });
+
+                if (selectedItem) {
+                    const config = vscode.workspace.getConfiguration('codeCompletion');
+                    await config.update('modelName', selectedItem.modelName, vscode.ConfigurationTarget.Global);
+                    aiModelsViewProvider.refresh();
+                    vscode.window.showInformationMessage(`Switched to model: ${selectedItem.label} (${selectedItem.description})`);
+                }
+            } catch (error) {
+                vscode.window.showErrorMessage('Failed to fetch available models. Make sure the server is running.');
+            }
         }
     }));
 }

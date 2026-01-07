@@ -20,6 +20,58 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "commands": [
+      {
+        "command": "gpt2-autocomplete.toggle",
+        "title": "GPT-2: Toggle",
+        "category": "AI Completion"
+      },
+      {
+        "command": "gpt2-autocomplete.switchModel",
+        "title": "GPT-2: Switch Model",
+        "category": "AI Completion"
+      },
+      {
+        "command": "gpt2-autocomplete.benchmarkModels",
+        "title": "GPT-2: Benchmark Models",
+        "category": "AI Completion"
+      },
+      {
+        "command": "gpt2-autocomplete.manageModels",
+        "title": "GPT-2: Manage Models",
+        "category": "AI Completion"
+      },
+      {
+        "command": "gpt2-autocomplete.undoLast",
+        "title": "GPT-2: Undo Last Completion",
+        "category": "AI Completion"
+      },
+      {
+        "command": "gpt2-autocomplete.showHistory",
+        "title": "GPT-2: Show Completion History",
+        "category": "AI Completion"
+      },
+      {
+        "command": "gpt2-autocomplete.showStats",
+        "title": "GPT-2: Show Statistics",
+        "category": "AI Completion"
+      },
+      {
+        "command": "gpt2-autocomplete.openSettings",
+        "title": "GPT-2: Open Settings",
+        "category": "AI Completion"
+      },
+      {
+        "command": "gpt2-autocomplete.exportSettings",
+        "title": "GPT-2: Export Settings",
+        "category": "AI Completion"
+      },
+      {
+        "command": "gpt2-autocomplete.importSettings",
+        "title": "GPT-2: Import Settings",
+        "category": "AI Completion"
+      }
+    ],
     "configuration": {
       "title": "Code Completion",
       "properties": {

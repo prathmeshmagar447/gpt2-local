@@ -230,11 +230,15 @@ Access via VS Code Settings (`Ctrl/Cmd + ,`) or use `GPT-2: Open Settings` comma
 
 ### **Available Commands**
 - `GPT-2: Toggle` - Enable/disable the extension
+- `GPT-2: Switch Model` - Select and switch between different AI models
+- `GPT-2: Benchmark Models` - Test all models and compare performance
+- `GPT-2: Manage Models` - Visual model management interface
 - `GPT-2: Undo Last` - Undo the last accepted completion
 - `GPT-2: Show History` - View recent completion history
 - `GPT-2: Show Stats` - Display performance metrics
 - `GPT-2: Open Settings` - Open extension settings
-- `GPT-2: Switch Model` - Select and switch between different AI models
+- `GPT-2: Export Settings` - Backup current configuration
+- `GPT-2: Import Settings` - Restore configuration from file
 
 ### **Available Models**
 

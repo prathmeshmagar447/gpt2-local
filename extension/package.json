@@ -1,7 +1,7 @@
 {
-  "name": "gpt2-local-autocomplete",
-  "displayName": "GPT-2 Local Autocomplete",
-  "description": "Local AI code completion using GPT-2",
+  "name": "ai-code-companion",
+  "displayName": "AI Code Companion",
+  "description": "Professional AI-powered code completion with multiple models, advanced analytics, and enterprise features",
   "version": "0.0.1",
   "publisher": "prathmesh",
   "repository": {
@@ -22,59 +22,59 @@
   "contributes": {
     "commands": [
       {
-        "command": "gpt2-autocomplete.toggle",
-        "title": "GPT-2: Toggle",
-        "category": "AI Completion"
+        "command": "ai-code-companion.toggle",
+        "title": "AI Code: Toggle",
+        "category": "AI Code Companion"
       },
       {
-        "command": "gpt2-autocomplete.switchModel",
-        "title": "GPT-2: Switch Model",
-        "category": "AI Completion"
+        "command": "ai-code-companion.switchModel",
+        "title": "AI Code: Switch Model",
+        "category": "AI Code Companion"
       },
       {
-        "command": "gpt2-autocomplete.benchmarkModels",
-        "title": "GPT-2: Benchmark Models",
-        "category": "AI Completion"
+        "command": "ai-code-companion.benchmarkModels",
+        "title": "AI Code: Benchmark Models",
+        "category": "AI Code Companion"
       },
       {
-        "command": "gpt2-autocomplete.manageModels",
-        "title": "GPT-2: Manage Models",
-        "category": "AI Completion"
+        "command": "ai-code-companion.manageModels",
+        "title": "AI Code: Manage Models",
+        "category": "AI Code Companion"
       },
       {
-        "command": "gpt2-autocomplete.undoLast",
-        "title": "GPT-2: Undo Last Completion",
-        "category": "AI Completion"
+        "command": "ai-code-companion.undoLast",
+        "title": "AI Code: Undo Last Completion",
+        "category": "AI Code Companion"
       },
       {
-        "command": "gpt2-autocomplete.showHistory",
-        "title": "GPT-2: Show Completion History",
-        "category": "AI Completion"
+        "command": "ai-code-companion.showHistory",
+        "title": "AI Code: Show Completion History",
+        "category": "AI Code Companion"
       },
       {
-        "command": "gpt2-autocomplete.showStats",
-        "title": "GPT-2: Show Statistics",
-        "category": "AI Completion"
+        "command": "ai-code-companion.showStats",
+        "title": "AI Code: Show Statistics",
+        "category": "AI Code Companion"
       },
       {
-        "command": "gpt2-autocomplete.openSettings",
-        "title": "GPT-2: Open Settings",
-        "category": "AI Completion"
+        "command": "ai-code-companion.openSettings",
+        "title": "AI Code: Open Settings",
+        "category": "AI Code Companion"
       },
       {
-        "command": "gpt2-autocomplete.exportSettings",
-        "title": "GPT-2: Export Settings",
-        "category": "AI Completion"
+        "command": "ai-code-companion.exportSettings",
+        "title": "AI Code: Export Settings",
+        "category": "AI Code Companion"
       },
       {
-        "command": "gpt2-autocomplete.importSettings",
-        "title": "GPT-2: Import Settings",
-        "category": "AI Completion"
+        "command": "ai-code-companion.importSettings",
+        "title": "AI Code: Import Settings",
+        "category": "AI Code Companion"
       },
       {
-        "command": "gpt2-autocomplete.showCompletionStats",
-        "title": "GPT-2: Show Completion Statistics",
-        "category": "AI Completion"
+        "command": "ai-code-companion.showCompletionStats",
+        "title": "AI Code: Show Completion Statistics",
+        "category": "AI Code Companion"
       }
     ],
     "configuration": {

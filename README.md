@@ -1,14 +1,14 @@
-# 🤖 GPT-2 Local Copilot
+# 🤖 AI Code Companion
 
 <div align="center">
 
-**Privacy-First AI Code Completion for VS Code**
+**Professional AI-Powered Code Completion for VS Code**
 
 [![GitHub Repo](https://img.shields.io/badge/GitHub-Repository-blue?logo=github)](https://github.com/prathmeshmagar447/gpt2-local)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![VS Code](https://img.shields.io/badge/VS_Code-Extension-purple?logo=visual-studio-code)](https://marketplace.visualstudio.com/)
 
-*Local AI-powered code completion that runs entirely on your machine. No data leaves your computer.*
+*Enterprise-grade AI code completion with 6 specialized models. Runs locally for maximum privacy and performance.*
 
 [🚀 Quick Start](#-quick-start) • [📖 Documentation](#-documentation) • [🔧 Installation](#-installation) • [❓ FAQ](#-faq)
 
@@ -16,15 +16,16 @@
 
 ---
 
-## ✨ **What is GPT-2 Local Copilot?**
+## ✨ **What is AI Code Companion?**
 
-GPT-2 Local Copilot is a **privacy-focused** alternative to GitHub Copilot that brings AI-powered code completion to your local development environment. Unlike cloud-based solutions, this extension:
+AI Code Companion is a **professional, enterprise-grade** AI coding assistant that provides intelligent code completion with multiple specialized models. Unlike cloud-based solutions, this extension:
 
 - 🔒 **Never sends your code to external servers**
-- ⚡ **Runs inference locally** using GPT-2 with advanced caching and quantization
-- 🎯 **Provides instant ghost text suggestions** similar to GitHub Copilot
-- 🚀 **Enterprise-grade features** with undo, history, and real-time metrics
-- 🔧 **Highly configurable** AI parameters and multi-model support
+- 🤖 **6 Specialized AI Models** for different coding tasks and performance needs
+- ⚡ **Advanced caching and quantization** for optimal performance
+- 🎯 **Enterprise features** including undo, history, benchmarking, and analytics
+- 🔧 **Highly configurable** with settings import/export and model management
+- 🚀 **Automatic model downloading** with local caching for offline use
 - 💰 **Completely free** and open source
 
 ## 🚀 **Key Features**
@@ -187,9 +188,9 @@ def calculate_area(radius):
 ```
 
 ### **Status Bar Control**
-- **🟢 GPT-2: ON**: Extension is active
-- **🔴 GPT-2: OFF**: Extension is disabled
-- **Click** the status bar item to toggle on/off
+- **🟢 AI: 85%**: Extension is active with cache hit rate
+- **🔴 AI: OFF**: Extension is disabled
+- **Click** the status bar item to toggle on/off or view stats
 
 ### **Language Support**
 Currently optimized for:
@@ -213,7 +214,7 @@ repetition_penalty=1.0  # Prevent repetition
 ```
 
 ### **Extension Configuration**
-Access via VS Code Settings (`Ctrl/Cmd + ,`) or use `GPT-2: Open Settings` command:
+Access via VS Code Settings (`Ctrl/Cmd + ,`) or use `AI Code: Open Settings` command:
 
 ```json
 {
@@ -229,17 +230,17 @@ Access via VS Code Settings (`Ctrl/Cmd + ,`) or use `GPT-2: Open Settings` comma
 ```
 
 ### **Available Commands**
-- `GPT-2: Toggle` - Enable/disable the extension
-- `GPT-2: Switch Model` - Select and switch between different AI models
-- `GPT-2: Benchmark Models` - Test all models and compare performance
-- `GPT-2: Manage Models` - Visual model management interface
-- `GPT-2: Undo Last` - Undo the last accepted completion
-- `GPT-2: Show History` - View recent completion history
-- `GPT-2: Show Stats` - Display performance metrics
-- `GPT-2: Open Settings` - Open extension settings
-- `GPT-2: Export Settings` - Backup current configuration
-- `GPT-2: Import Settings` - Restore configuration from file
-- `GPT-2: Show Completion Statistics` - View detailed usage analytics and performance metrics
+- `AI Code: Toggle` - Enable/disable the extension
+- `AI Code: Switch Model` - Select and switch between different AI models
+- `AI Code: Benchmark Models` - Test all models and compare performance
+- `AI Code: Manage Models` - Visual model management interface
+- `AI Code: Undo Last` - Undo the last accepted completion
+- `AI Code: Show History` - View recent completion history
+- `AI Code: Show Stats` - Display performance metrics
+- `AI Code: Open Settings` - Open extension settings
+- `AI Code: Export Settings` - Backup current configuration
+- `AI Code: Import Settings` - Restore configuration from file
+- `AI Code: Show Completion Statistics` - View detailed usage analytics and performance metrics
 
 ### **Available Models**
 

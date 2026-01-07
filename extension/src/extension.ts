@@ -12,7 +12,7 @@ let completionHistory: CompletionHistory;
 const activationTime = Date.now();
 
 export function activate(context: vscode.ExtensionContext) {
-    console.log('GPT-2 Ghost Text Autocomplete is active!');
+    console.log('AI Code Companion is active!');
 
     // Initialize managers
     serverManager = new ServerManager();
@@ -31,17 +31,17 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(registration);
 
     // Register commands
-    context.subscriptions.push(vscode.commands.registerCommand('gpt2-autocomplete.logAcceptance', (text: string, document: vscode.TextDocument, position: vscode.Position) => {
+    context.subscriptions.push(vscode.commands.registerCommand('ai-code-companion.logAcceptance', (text: string, document: vscode.TextDocument, position: vscode.Position) => {
         console.log(`User accepted code: ${text}`);
         completionHistory.addAcceptedCompletion(text, document, position);
     }));
 
-    context.subscriptions.push(vscode.commands.registerCommand('gpt2-autocomplete.undoLast', () => {
+    context.subscriptions.push(vscode.commands.registerCommand('ai-code-companion.undoLast', () => {
         completionHistory.undoLastCompletion();
         vscode.window.showInformationMessage('Undid last completion');
     }));
 
-    context.subscriptions.push(vscode.commands.registerCommand('gpt2-autocomplete.showHistory', () => {
+    context.subscriptions.push(vscode.commands.registerCommand('ai-code-companion.showHistory', () => {
         const recent = completionHistory.getRecentCompletions();
         if (recent.length === 0) {
             vscode.window.showInformationMessage('No completion history');
@@ -54,11 +54,11 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.showQuickPick(items, { placeHolder: 'Recent completions' });
     }));
 
-    context.subscriptions.push(vscode.commands.registerCommand('gpt2-autocomplete.openSettings', () => {
+    context.subscriptions.push(vscode.commands.registerCommand('ai-code-companion.openSettings', () => {
         vscode.commands.executeCommand('workbench.action.openSettings', 'codeCompletion');
     }));
 
-    context.subscriptions.push(vscode.commands.registerCommand('gpt2-autocomplete.switchModel', async () => {
+    context.subscriptions.push(vscode.commands.registerCommand('ai-code-companion.switchModel', async () => {
         try {
             const response = await axios.get('http://127.0.0.1:8000/models', { timeout: 5000 });
             const models = response.data.models;
@@ -87,7 +87,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }));
 
-    context.subscriptions.push(vscode.commands.registerCommand('gpt2-autocomplete.benchmarkModels', async () => {
+    context.subscriptions.push(vscode.commands.registerCommand('ai-code-companion.benchmarkModels', async () => {
         try {
             const response = await axios.get('http://127.0.0.1:8000/models', { timeout: 5000 });
             const models = response.data.models;
@@ -157,7 +157,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }));
 
-    context.subscriptions.push(vscode.commands.registerCommand('gpt2-autocomplete.exportSettings', async () => {
+    context.subscriptions.push(vscode.commands.registerCommand('ai-code-companion.exportSettings', async () => {
         try {
             const config = vscode.workspace.getConfiguration('codeCompletion');
             const settings = {
@@ -169,11 +169,13 @@ export function activate(context: vscode.ExtensionContext) {
                 modelName: config.get('modelName'),
                 useQuantization: config.get('useQuantization'),
                 logLevel: config.get('logLevel'),
+                suggestionTheme: config.get('suggestionTheme'),
+                showCompletionStats: config.get('showCompletionStats'),
                 exportedAt: new Date().toISOString()
             };
 
             const uri = await vscode.window.showSaveDialog({
-                defaultUri: vscode.Uri.file('gpt2-completion-settings.json'),
+                defaultUri: vscode.Uri.file('ai-code-companion-settings.json'),
                 filters: { 'JSON': ['json'] }
             });
 
@@ -186,7 +188,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }));
 
-    context.subscriptions.push(vscode.commands.registerCommand('gpt2-autocomplete.importSettings', async () => {
+    context.subscriptions.push(vscode.commands.registerCommand('ai-code-companion.importSettings', async () => {
         try {
             const uri = await vscode.window.showOpenDialog({
                 canSelectFiles: true,
@@ -219,7 +221,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }));
 
-    context.subscriptions.push(vscode.commands.registerCommand('gpt2-autocomplete.showCompletionStats', async () => {
+    context.subscriptions.push(vscode.commands.registerCommand('ai-code-companion.showCompletionStats', async () => {
         // Calculate statistics from status bar manager and completion history
         const stats = {
             totalCompletions: completionHistory.getRecentCompletions(1000).length,
@@ -240,7 +242,7 @@ export function activate(context: vscode.ExtensionContext) {
         panel.webview.html = generateStatsDashboardHTML(stats);
     }));
 
-    context.subscriptions.push(vscode.commands.registerCommand('gpt2-autocomplete.manageModels', async () => {
+    context.subscriptions.push(vscode.commands.registerCommand('ai-code-companion.manageModels', async () => {
         const panel = vscode.window.createWebviewPanel(
             'modelManager',
             'AI Model Manager',
@@ -254,7 +256,7 @@ export function activate(context: vscode.ExtensionContext) {
 
             panel.webview.html = generateModelManagerHTML(models);
         } catch (error) {
-            panel.webview.html = `<h2>Error: Cannot connect to server</h2><p>Make sure the GPT-2 server is running.</p>`;
+            panel.webview.html = `<h2>Error: Cannot connect to server</h2><p>Make sure the AI Code Companion server is running.</p>`;
         }
     }));
 }
